@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageChannel {
+  WEB
+  WHATSAPP
+}
+
+enum IntentType {
+  SUPPORT
+  SALES
+  ESCALATE
+  UNKNOWN
+}
+
+enum TicketStatus {
+  NEW
+  OPEN
+  RESOLVED
+  CLOSED
+}
+
+model Catalog {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  catalogId   String
+  catalog     Catalog  @relation(fields: [catalogId], references: [id])
+
+  sku         String   @unique
+  name        String
+  description String?
+  price       Float?
+  currency    String? // e.g. USD
+
+  category    String?
+  imageUrl    String?
+  tags        String? // comma separated placeholder
+  createdAt   DateTime @default(now())
+}
+
+model HelpArticle {
+  id         String   @id @default(cuid())
+  topic      String
+  title      String
+  content    String
+  url        String?
+  createdAt  DateTime @default(now())
+}
+
+model Policy {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. SHIPPING_POLICY
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Faq {
+  id         String   @id @default(cuid())
+  intent     IntentType
+  question   String
+  answer     String
+  tags       String?
+  createdAt  DateTime @default(now())
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  name        String?
+  email       String?
+  phone       String?
+  message     String?
+  createdAt   DateTime @default(now())
+
+  status      String   @default("NEW") // placeholder
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  channel      MessageChannel
+  externalUser String?  // WhatsApp From number or web session id
+  createdAt    DateTime @default(now())
+
+  messages     Message[]
+  leads        Lead[]
+  ticketId     String?
+  ticket       Ticket? @relation(fields: [ticketId], references: [id])
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  conversationId String
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+
+  role      String // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Ticket {
+  id           String   @id @default(cuid())
+  status       TicketStatus @default(NEW)
+  subject      String
+  summary      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+}
